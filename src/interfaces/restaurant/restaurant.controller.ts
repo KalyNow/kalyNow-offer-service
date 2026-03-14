@@ -9,12 +9,17 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { RestaurantService } from "../../application/restaurant/restaurant.service";
 import { CreateRestaurantDto } from "../../application/restaurant/dto/create-restaurant.dto";
 import { UpdateRestaurantDto } from "../../application/restaurant/dto/update-restaurant.dto";
+import { StorageService } from "../../infrastructure/storage/storage.service";
 import { ApiTags } from "@nestjs/swagger";
-import { ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiSecurity } from "@nestjs/swagger";
+import { ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiSecurity, ApiConsumes, ApiBody } from "@nestjs/swagger";
 import { CurrentUser } from "../common/current-user.decorator";
 import type { AuthenticatedUser } from "../common/current-user.decorator";
 import { Roles, UserRole } from "../common/roles.decorator";
@@ -24,12 +29,15 @@ import { Roles, UserRole } from "../common/roles.decorator";
 @ApiSecurity("X-User-Role")
 @Controller("restaurants")
 export class RestaurantController {
-  constructor(private readonly restaurantService: RestaurantService) { }
+  constructor(
+    private readonly restaurantService: RestaurantService,
+    private readonly storageService: StorageService,
+  ) { }
 
   @Get()
   @ApiOperation({ summary: "List all restaurants" })
   @ApiResponse({ status: 200, description: "Array of restaurants" })
-  findAll(
+  async findAll(
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.restaurantService.findAll();
@@ -38,10 +46,10 @@ export class RestaurantController {
   @Get("/me")
   @ApiOperation({ summary: "List restaurants owned by the authenticated seller" })
   @ApiResponse({ status: 200, description: "Array of restaurants belonging to the current user" })
-  finByOwner(
+  async finByOwner(
     @CurrentUser() user: AuthenticatedUser
   ) {
-    return this.restaurantService.findByOwner(user.id)
+    return this.restaurantService.findByOwner(user.id);
   }
 
   @Get(":id")
@@ -49,7 +57,7 @@ export class RestaurantController {
   @ApiParam({ name: "id", description: "MongoDB ObjectId of the restaurant" })
   @ApiResponse({ status: 200, description: "Restaurant found" })
   @ApiResponse({ status: 404, description: "Restaurant not found" })
-  findOne(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+  async findOne(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
     return this.restaurantService.findOne(id);
   }
 
@@ -59,7 +67,7 @@ export class RestaurantController {
   @ApiOperation({ summary: "Create a restaurant (SELLER / ADMIN)" })
   @ApiResponse({ status: 201, description: "Restaurant created" })
   @ApiResponse({ status: 403, description: "Forbidden — requires SELLER or ADMIN role" })
-  create(@CurrentUser() user: AuthenticatedUser, @Body() createRestaurantDto: CreateRestaurantDto) {
+  async create(@CurrentUser() user: AuthenticatedUser, @Body() createRestaurantDto: CreateRestaurantDto) {
     return this.restaurantService.create(createRestaurantDto, user.id);
   }
 
@@ -70,7 +78,7 @@ export class RestaurantController {
   @ApiResponse({ status: 200, description: "Restaurant updated" })
   @ApiResponse({ status: 403, description: "Forbidden — not the owner" })
   @ApiResponse({ status: 404, description: "Restaurant not found" })
-  update(
+  async update(
     @CurrentUser() user: AuthenticatedUser,
     @Param("id") id: string,
     @Body() updateRestaurantDto: UpdateRestaurantDto,
@@ -88,5 +96,45 @@ export class RestaurantController {
   @ApiResponse({ status: 404, description: "Restaurant not found" })
   remove(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
     return this.restaurantService.remove(id, user.id);
+  }
+  // ----------------------------------------------------------------
+  // Logo upload
+  // ----------------------------------------------------------------
+
+  @Post(":id/logo")
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.SELLER, UserRole.ADMIN)
+  @UseInterceptors(FileInterceptor("file"))
+  @ApiOperation({ summary: "Upload or replace the restaurant logo" })
+  @ApiParam({ name: "id", description: "MongoDB ObjectId of the restaurant" })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: {
+        file: { type: "string", format: "binary", description: "Logo image (jpg, png, webp, svg)" },
+      },
+      required: ["file"],
+    },
+  })
+  @ApiResponse({ status: 200, description: "Logo uploaded, returns updated restaurant" })
+  @ApiResponse({ status: 400, description: "No file provided" })
+  @ApiResponse({ status: 403, description: "Forbidden \u2014 not the owner" })
+  @ApiResponse({ status: 404, description: "Restaurant not found" })
+  async uploadLogo(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id") id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException("No file provided");
+
+    const path = await this.storageService.upload(
+      file.buffer,
+      file.originalname,
+      "restaurants/logos",
+    );
+
+    // path = "/kalynow-assets/restaurants/logos/uuid.jpg" — stored as-is in DB
+    return this.restaurantService.update(id, { logoUrl: path }, user.id);
   }
 }

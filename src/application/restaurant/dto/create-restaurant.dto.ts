@@ -4,6 +4,7 @@ import {
   IsEmail,
   IsOptional,
   IsBoolean,
+  IsUrl,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
@@ -32,6 +33,11 @@ export class CreateRestaurantDto {
   @IsEmail()
   @IsOptional()
   email?: string;
+
+  @ApiPropertyOptional({ example: "https://cdn.example.com/logo.png", description: "URL of the restaurant logo" })
+  @IsUrl()
+  @IsOptional()
+  logoUrl?: string;
 
   @ApiPropertyOptional({ example: true, description: "Whether the restaurant is accepting orders", default: true })
   @IsBoolean()

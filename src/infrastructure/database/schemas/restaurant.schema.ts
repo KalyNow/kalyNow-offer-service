@@ -23,6 +23,9 @@ export class Restaurant {
   @Prop()
   email: string;
 
+  @Prop({ default: null })
+  logoUrl: string;
+
   @Prop({ default: true })
   isActive: boolean;
 }

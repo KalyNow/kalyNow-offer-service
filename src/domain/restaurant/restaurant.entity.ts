@@ -6,6 +6,7 @@ export class Restaurant {
   address: string;
   phone: string;
   email: string;
+  logoUrl: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

@@ -1,6 +1,9 @@
 import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { MongooseModule } from "@nestjs/mongoose";
+import { MulterModule } from "@nestjs/platform-express";
+import { memoryStorage } from "multer";
+import { StorageModule } from "../storage/storage.module";
 import {
   Restaurant,
   RestaurantSchema,
@@ -26,6 +29,8 @@ import { RolesGuard } from "../../interfaces/common/roles.guard";
 
 @Module({
   imports: [
+    MulterModule.register({ storage: memoryStorage() }),
+    StorageModule,
     MongooseModule.forFeature([
       { name: Restaurant.name, schema: RestaurantSchema },
       { name: Offer.name, schema: OfferSchema },
