@@ -7,6 +7,7 @@ export class Offer {
   discountedPrice: number;
   availableFrom: Date;
   availableTo: Date;
+  imageUrls: string[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

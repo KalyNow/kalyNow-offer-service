@@ -10,7 +10,7 @@ export class OfferRepositoryImpl implements OfferRepository {
   constructor(
     @InjectModel(Offer.name)
     private readonly offerModel: Model<OfferDocument>,
-  ) {}
+  ) { }
 
   async findAll(): Promise<OfferEntity[]> {
     const documents = await this.offerModel.find().exec();
@@ -58,6 +58,7 @@ export class OfferRepositoryImpl implements OfferRepository {
     entity.discountedPrice = doc.discountedPrice;
     entity.availableFrom = doc.availableFrom;
     entity.availableTo = doc.availableTo;
+    entity.imageUrls = doc.imageUrls ?? [];
     entity.isActive = doc.isActive;
     entity.createdAt = (doc as unknown as { createdAt: Date }).createdAt;
     entity.updatedAt = (doc as unknown as { updatedAt: Date }).updatedAt;

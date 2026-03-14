@@ -10,10 +10,15 @@ export class RestaurantRepositoryImpl implements RestaurantRepository {
   constructor(
     @InjectModel(Restaurant.name)
     private readonly restaurantModel: Model<RestaurantDocument>,
-  ) {}
+  ) { }
 
   async findAll(): Promise<RestaurantEntity[]> {
     const documents = await this.restaurantModel.find().exec();
+    return documents.map((doc) => this.toEntity(doc));
+  }
+
+  async findByOwner(ownerId: string): Promise<RestaurantEntity[]> {
+    const documents = await this.restaurantModel.find({ ownerId }).exec();
     return documents.map((doc) => this.toEntity(doc));
   }
 
@@ -48,6 +53,7 @@ export class RestaurantRepositoryImpl implements RestaurantRepository {
   private toEntity(doc: RestaurantDocument): RestaurantEntity {
     const entity = new RestaurantEntity();
     entity.id = String(doc._id);
+    entity.ownerId = doc.ownerId;
     entity.name = doc.name;
     entity.description = doc.description;
     entity.address = doc.address;

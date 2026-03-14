@@ -1,12 +1,16 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Offer } from "../../domain/offer/offer.entity";
 import { OfferRepository } from "../../domain/offer/offer.repository";
+import { RestaurantRepository } from "../../domain/restaurant/restaurant.repository";
 import { CreateOfferDto } from "./dto/create-offer.dto";
 import { UpdateOfferDto } from "./dto/update-offer.dto";
 
 @Injectable()
 export class OfferService {
-  constructor(private readonly offerRepository: OfferRepository) {}
+  constructor(
+    private readonly offerRepository: OfferRepository,
+    private readonly restaurantRepository: RestaurantRepository,
+  ) { }
 
   findAll(): Promise<Offer[]> {
     return this.offerRepository.findAll();
@@ -24,7 +28,8 @@ export class OfferService {
     return this.offerRepository.findByRestaurantId(restaurantId);
   }
 
-  create(createOfferDto: CreateOfferDto): Promise<Offer> {
+  async create(createOfferDto: CreateOfferDto, requesterId: string): Promise<Offer> {
+    await this.assertRestaurantOwnership(createOfferDto.restaurantId, requesterId);
     return this.offerRepository.create({
       ...createOfferDto,
       availableFrom: createOfferDto.availableFrom
@@ -36,7 +41,9 @@ export class OfferService {
     });
   }
 
-  async update(id: string, updateOfferDto: UpdateOfferDto): Promise<Offer> {
+  async update(id: string, updateOfferDto: UpdateOfferDto, requesterId: string): Promise<Offer> {
+    const existing = await this.findOne(id);
+    await this.assertRestaurantOwnership(existing.restaurantId, requesterId);
     const offer = await this.offerRepository.update(id, {
       ...updateOfferDto,
       availableFrom: updateOfferDto.availableFrom
@@ -52,10 +59,22 @@ export class OfferService {
     return offer;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, requesterId: string): Promise<void> {
+    const existing = await this.findOne(id);
+    await this.assertRestaurantOwnership(existing.restaurantId, requesterId);
     const deleted = await this.offerRepository.delete(id);
     if (!deleted) {
       throw new NotFoundException(`Offer #${id} not found`);
+    }
+  }
+
+  private async assertRestaurantOwnership(restaurantId: string, requesterId: string): Promise<void> {
+    const restaurant = await this.restaurantRepository.findById(restaurantId);
+    if (!restaurant) {
+      throw new NotFoundException(`Restaurant #${restaurantId} not found`);
+    }
+    if (restaurant.ownerId !== requesterId) {
+      throw new ForbiddenException('You can only manage offers for your own restaurant');
     }
   }
 }

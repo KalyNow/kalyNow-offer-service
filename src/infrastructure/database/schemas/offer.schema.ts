@@ -26,6 +26,9 @@ export class Offer {
   @Prop()
   availableTo: Date;
 
+  @Prop({ type: [String], default: [] })
+  imageUrls: string[];
+
   @Prop({ default: true })
   isActive: boolean;
 }

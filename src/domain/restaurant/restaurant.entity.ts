@@ -1,5 +1,6 @@
 export class Restaurant {
   id: string;
+  ownerId: string;
   name: string;
   description: string;
   address: string;
