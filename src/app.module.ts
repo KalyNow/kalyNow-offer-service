@@ -10,6 +10,9 @@ import { OfferServiceModule } from "./infrastructure/modules/offer-service.modul
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         uri: config.getOrThrow<string>("MONGODB_URI"),
+        // Auto-create collections and sync indexes on startup
+        autoCreate: true,
+        autoIndex: true,
       }),
     }),
     OfferServiceModule,
