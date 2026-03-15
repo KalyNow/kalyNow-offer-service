@@ -5,6 +5,9 @@ import {
   IsOptional,
   IsBoolean,
   IsUrl,
+  IsNumber,
+  Min,
+  Max,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
@@ -38,6 +41,20 @@ export class CreateRestaurantDto {
   @IsUrl()
   @IsOptional()
   logoUrl?: string;
+
+  @ApiPropertyOptional({ example: -21.4545, description: "GPS latitude (-90 to 90)" })
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  @IsOptional()
+  latitude?: number;
+
+  @ApiPropertyOptional({ example: 47.0833, description: "GPS longitude (-180 to 180)" })
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  @IsOptional()
+  longitude?: number;
 
   @ApiPropertyOptional({ example: true, description: "Whether the restaurant is accepting orders", default: true })
   @IsBoolean()

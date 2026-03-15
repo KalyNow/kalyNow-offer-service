@@ -7,6 +7,8 @@ export class Restaurant {
   phone: string;
   email: string;
   logoUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

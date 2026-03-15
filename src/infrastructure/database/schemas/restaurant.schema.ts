@@ -26,6 +26,12 @@ export class Restaurant {
   @Prop({ default: null })
   logoUrl: string;
 
+  @Prop({ type: Number, default: null })
+  latitude: number | null;
+
+  @Prop({ type: Number, default: null })
+  longitude: number | null;
+
   @Prop({ default: true })
   isActive: boolean;
 }

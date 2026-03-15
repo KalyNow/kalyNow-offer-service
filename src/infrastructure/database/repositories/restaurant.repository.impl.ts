@@ -60,6 +60,8 @@ export class RestaurantRepositoryImpl implements RestaurantRepository {
     entity.phone = doc.phone;
     entity.email = doc.email;
     entity.logoUrl = doc.logoUrl ?? null;
+    entity.latitude = (doc as unknown as { latitude: number | null }).latitude ?? null;
+    entity.longitude = (doc as unknown as { longitude: number | null }).longitude ?? null;
     entity.isActive = doc.isActive;
     entity.createdAt = (doc as unknown as { createdAt: Date }).createdAt;
     entity.updatedAt = (doc as unknown as { updatedAt: Date }).updatedAt;
