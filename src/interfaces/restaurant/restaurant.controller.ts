@@ -17,6 +17,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { RestaurantService } from "../../application/restaurant/restaurant.service";
 import { CreateRestaurantDto } from "../../application/restaurant/dto/create-restaurant.dto";
 import { UpdateRestaurantDto } from "../../application/restaurant/dto/update-restaurant.dto";
+import { RestaurantQueryDto } from "../../application/restaurant/dto/restaurant-query.dto";
 import { StorageService } from "../../infrastructure/storage/storage.service";
 import { ApiTags } from "@nestjs/swagger";
 import { ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiSecurity, ApiConsumes, ApiBody } from "@nestjs/swagger";
@@ -35,21 +36,29 @@ export class RestaurantController {
   ) { }
 
   @Get()
-  @ApiOperation({ summary: "List all restaurants" })
-  @ApiResponse({ status: 200, description: "Array of restaurants" })
+  @ApiOperation({ summary: "List all restaurants with pagination" })
+  @ApiQuery({ name: "page", required: false, description: "Page number (default 1)" })
+  @ApiQuery({ name: "limit", required: false, description: "Items per page (default 20, max 100)" })
+  @ApiQuery({ name: "search", required: false, description: "Search by name" })
+  @ApiResponse({ status: 200, description: "Paginated array of restaurants" })
   async findAll(
     @CurrentUser() user: AuthenticatedUser,
+    @Query() query: RestaurantQueryDto,
   ) {
-    return this.restaurantService.findAll();
+    return this.restaurantService.findPaginated(query);
   }
 
   @Get("/me")
-  @ApiOperation({ summary: "List restaurants owned by the authenticated seller" })
-  @ApiResponse({ status: 200, description: "Array of restaurants belonging to the current user" })
+  @ApiOperation({ summary: "List restaurants owned by the authenticated seller (paginated)" })
+  @ApiQuery({ name: "page", required: false, description: "Page number (default 1)" })
+  @ApiQuery({ name: "limit", required: false, description: "Items per page (default 20, max 100)" })
+  @ApiQuery({ name: "search", required: false, description: "Search by name" })
+  @ApiResponse({ status: 200, description: "Paginated array of restaurants belonging to the current user" })
   async finByOwner(
-    @CurrentUser() user: AuthenticatedUser
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: RestaurantQueryDto,
   ) {
-    return this.restaurantService.findByOwner(user.id);
+    return this.restaurantService.findByOwnerPaginated(user.id, query);
   }
 
   @Get(":id")

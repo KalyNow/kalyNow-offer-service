@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import { FilterQuery, Model } from "mongoose";
 import { Restaurant as RestaurantEntity } from "../../../domain/restaurant/restaurant.entity";
-import { RestaurantRepository } from "../../../domain/restaurant/restaurant.repository";
+import { RestaurantRepository, FindRestaurantsParams } from "../../../domain/restaurant/restaurant.repository";
 import { Restaurant, RestaurantDocument } from "../schemas/restaurant.schema";
 
 @Injectable()
@@ -48,6 +48,28 @@ export class RestaurantRepositoryImpl implements RestaurantRepository {
   async delete(id: string): Promise<boolean> {
     const result = await this.restaurantModel.findByIdAndDelete(id).exec();
     return result !== null;
+  }
+
+  private buildFilter(params: Omit<FindRestaurantsParams, 'page' | 'limit'>): FilterQuery<RestaurantDocument> {
+    const filter: FilterQuery<RestaurantDocument> = {};
+    if (params.ownerId) filter.ownerId = params.ownerId;
+    if (params.search) filter.name = { $regex: params.search, $options: 'i' };
+    return filter;
+  }
+
+  async findPaginated(params: FindRestaurantsParams): Promise<RestaurantEntity[]> {
+    const skip = (params.page - 1) * params.limit;
+    const documents = await this.restaurantModel
+      .find(this.buildFilter(params))
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(params.limit)
+      .exec();
+    return documents.map((doc) => this.toEntity(doc));
+  }
+
+  async countFiltered(params: Omit<FindRestaurantsParams, 'page' | 'limit'>): Promise<number> {
+    return this.restaurantModel.countDocuments(this.buildFilter(params)).exec();
   }
 
   private toEntity(doc: RestaurantDocument): RestaurantEntity {

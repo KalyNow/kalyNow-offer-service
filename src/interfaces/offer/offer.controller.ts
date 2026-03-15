@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -17,6 +18,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { OfferService } from "../../application/offer/offer.service";
 import { CreateOfferDto } from "../../application/offer/dto/create-offer.dto";
 import { UpdateOfferDto } from "../../application/offer/dto/update-offer.dto";
+import { OfferQueryDto } from "../../application/common/paginated-result.dto";
 import { StorageService } from "../../infrastructure/storage/storage.service";
 import { ApiTags } from "@nestjs/swagger";
 import { ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiSecurity, ApiConsumes, ApiBody } from "@nestjs/swagger";
@@ -36,16 +38,18 @@ export class OfferController {
   // StorageService is injected only for the image upload endpoint
 
   @Get()
-  @ApiOperation({ summary: "List all offers, optionally filtered by restaurant" })
-  @ApiQuery({ name: "restaurantId", required: false, description: "Filter offers by restaurant ID" })
-  @ApiResponse({ status: 200, description: "Array of offers" })
+  @ApiOperation({ summary: "List offers with pagination, optional filters (restaurantId, activeOnly, search)" })
+  @ApiQuery({ name: "page", required: false, description: "Page number (default 1)" })
+  @ApiQuery({ name: "limit", required: false, description: "Items per page (default 20, max 100)" })
+  @ApiQuery({ name: "search", required: false, description: "Search by title" })
+  @ApiQuery({ name: "restaurantId", required: false, description: "Filter by restaurant ID" })
+  @ApiQuery({ name: "activeOnly", required: false, description: "true=active only | false=inactive/expired | absent=all" })
+  @ApiResponse({ status: 200, description: "Paginated offers with status field" })
   async findAll(
     @CurrentUser() user: AuthenticatedUser,
-    @Query("restaurantId") restaurantId?: string,
+    @Query() query: OfferQueryDto,
   ) {
-    return restaurantId
-      ? await this.offerService.findByRestaurant(restaurantId)
-      : await this.offerService.findAll();
+    return this.offerService.findPaginated(query);
   }
 
   @Get(":id")
@@ -92,6 +96,30 @@ export class OfferController {
   @ApiResponse({ status: 404, description: "Offer not found" })
   remove(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
     return this.offerService.remove(id, user.id);
+  }
+
+  @Patch(":id/deactivate")
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.SELLER, UserRole.ADMIN)
+  @ApiOperation({ summary: "Soft-delete: set isActive=false (SELLER must own the restaurant)" })
+  @ApiParam({ name: "id", description: "MongoDB ObjectId of the offer" })
+  @ApiResponse({ status: 200, description: "Offer deactivated" })
+  @ApiResponse({ status: 403, description: "Forbidden — not the restaurant owner" })
+  @ApiResponse({ status: 404, description: "Offer not found" })
+  deactivate(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.offerService.deactivate(id, user.id);
+  }
+
+  @Patch(":id/activate")
+  @HttpCode(HttpStatus.OK)
+  @Roles(UserRole.SELLER, UserRole.ADMIN)
+  @ApiOperation({ summary: "Re-activate a previously deactivated offer" })
+  @ApiParam({ name: "id", description: "MongoDB ObjectId of the offer" })
+  @ApiResponse({ status: 200, description: "Offer activated" })
+  @ApiResponse({ status: 403, description: "Forbidden — not the restaurant owner" })
+  @ApiResponse({ status: 404, description: "Offer not found" })
+  activate(@CurrentUser() user: AuthenticatedUser, @Param("id") id: string) {
+    return this.offerService.activate(id, user.id);
   }
 
   // ----------------------------------------------------------------

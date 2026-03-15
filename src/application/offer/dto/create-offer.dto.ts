@@ -62,4 +62,10 @@ export class CreateOfferDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @ApiPropertyOptional({ example: 10, description: "Number of portions available (null = unlimited)" })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  quantity?: number;
 }
