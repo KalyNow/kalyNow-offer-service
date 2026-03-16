@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import { FilterQuery, Model } from "mongoose";
 import { Offer as OfferEntity } from "../../../domain/offer/offer.entity";
-import { OfferRepository } from "../../../domain/offer/offer.repository";
+import { OfferRepository, FindOffersParams } from "../../../domain/offer/offer.repository";
 import { Offer, OfferDocument } from "../schemas/offer.schema";
 
 @Injectable()
@@ -10,7 +10,7 @@ export class OfferRepositoryImpl implements OfferRepository {
   constructor(
     @InjectModel(Offer.name)
     private readonly offerModel: Model<OfferDocument>,
-  ) {}
+  ) { }
 
   async findAll(): Promise<OfferEntity[]> {
     const documents = await this.offerModel.find().exec();
@@ -43,6 +43,36 @@ export class OfferRepositoryImpl implements OfferRepository {
     return updated ? this.toEntity(updated) : null;
   }
 
+  private buildFilter(params: Omit<FindOffersParams, 'page' | 'limit'>): FilterQuery<OfferDocument> {
+    const filter: FilterQuery<OfferDocument> = {};
+    if (params.restaurantId) filter.restaurantId = params.restaurantId;
+    if (params.search) filter.title = { $regex: params.search, $options: 'i' };
+    if (params.activeOnly === true) {
+      filter.isActive = true;
+      filter.$or = [{ availableTo: null }, { availableTo: { $gte: new Date() } }];
+    } else if (params.activeOnly === false) {
+      filter.$or = [{ isActive: false }, { availableTo: { $lt: new Date() } }];
+    }
+    return filter;
+  }
+
+  async findPaginated(params: FindOffersParams): Promise<OfferEntity[]> {
+    const skip = (params.page - 1) * params.limit;
+    const filter = this.buildFilter(params);
+    const documents = await this.offerModel
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(params.limit)
+      .exec();
+    return documents.map((doc) => this.toEntity(doc));
+  }
+
+  async countFiltered(params: Omit<FindOffersParams, 'page' | 'limit'>): Promise<number> {
+    const filter = this.buildFilter(params);
+    return this.offerModel.countDocuments(filter).exec();
+  }
+
   async delete(id: string): Promise<boolean> {
     const result = await this.offerModel.findByIdAndDelete(id).exec();
     return result !== null;
@@ -58,7 +88,9 @@ export class OfferRepositoryImpl implements OfferRepository {
     entity.discountedPrice = doc.discountedPrice;
     entity.availableFrom = doc.availableFrom;
     entity.availableTo = doc.availableTo;
+    entity.imageUrls = doc.imageUrls ?? [];
     entity.isActive = doc.isActive;
+    entity.quantity = doc.quantity ?? null;
     entity.createdAt = (doc as unknown as { createdAt: Date }).createdAt;
     entity.updatedAt = (doc as unknown as { updatedAt: Date }).updatedAt;
     return entity;

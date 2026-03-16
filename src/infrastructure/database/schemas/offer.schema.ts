@@ -26,8 +26,13 @@ export class Offer {
   @Prop()
   availableTo: Date;
 
+  @Prop({ type: [String], default: [] })
+  imageUrls: string[];
+
   @Prop({ default: true })
   isActive: boolean;
-}
 
+  @Prop({ min: 0 })
+  quantity: number;
+}
 export const OfferSchema = SchemaFactory.createForClass(Offer);

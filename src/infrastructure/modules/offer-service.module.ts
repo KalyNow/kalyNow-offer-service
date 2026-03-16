@@ -1,5 +1,9 @@
 import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
 import { MongooseModule } from "@nestjs/mongoose";
+import { MulterModule } from "@nestjs/platform-express";
+import { memoryStorage } from "multer";
+import { StorageModule } from "../storage/storage.module";
 import {
   Restaurant,
   RestaurantSchema,
@@ -21,9 +25,12 @@ import { ReservationService } from "../../application/reservation/reservation.se
 import { RestaurantController } from "../../interfaces/restaurant/restaurant.controller";
 import { OfferController } from "../../interfaces/offer/offer.controller";
 import { ReservationController } from "../../interfaces/reservation/reservation.controller";
+import { RolesGuard } from "../../interfaces/common/roles.guard";
 
 @Module({
   imports: [
+    MulterModule.register({ storage: memoryStorage() }),
+    StorageModule,
     MongooseModule.forFeature([
       { name: Restaurant.name, schema: RestaurantSchema },
       { name: Offer.name, schema: OfferSchema },
@@ -38,6 +45,7 @@ import { ReservationController } from "../../interfaces/reservation/reservation.
     { provide: RestaurantRepository, useClass: RestaurantRepositoryImpl },
     { provide: OfferRepository, useClass: OfferRepositoryImpl },
     { provide: ReservationRepository, useClass: ReservationRepositoryImpl },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
-export class OfferServiceModule {}
+export class OfferServiceModule { }

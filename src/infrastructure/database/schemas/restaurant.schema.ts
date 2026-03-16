@@ -5,6 +5,9 @@ export type RestaurantDocument = Restaurant & Document;
 
 @Schema({ timestamps: true })
 export class Restaurant {
+  @Prop({ required: true, index: true })
+  ownerId: string;
+
   @Prop({ required: true })
   name: string;
 
@@ -19,6 +22,15 @@ export class Restaurant {
 
   @Prop()
   email: string;
+
+  @Prop({ default: null })
+  logoUrl: string;
+
+  @Prop({ type: Number, default: null })
+  latitude: number | null;
+
+  @Prop({ type: Number, default: null })
+  longitude: number | null;
 
   @Prop({ default: true })
   isActive: boolean;
